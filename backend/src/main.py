@@ -52,3 +52,5 @@ async def scan_video(file: UploadFile = File(...)):
 # --- 3. RUNNER ---
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+# https://brashiest-florinda-pseudodemocratically.ngrok-free.dev
