@@ -1,7 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
-import { ThemeContext } from '../context/ThemeContext';
 import LogoSvg from '../assests/Deepfake logo.svg';
 
 function Navbar() {
