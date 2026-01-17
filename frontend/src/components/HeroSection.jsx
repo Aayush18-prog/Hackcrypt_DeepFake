@@ -1,8 +1,9 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCloudArrowUp, FaX } from 'react-icons/fa6';
 import { AnalysisContext } from '../context/AnalysisContext';
 import { usePolling } from '../hooks/usePolling';
+import { startAnalysis as submitAnalysisFile, getAnalysisStatus } from '../api/client';
 
 function HeroSection() {
   const navigate = useNavigate();
@@ -94,9 +95,8 @@ function HeroSection() {
     const file = selectedFiles[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-    
+    console.log('🔵 Submit button clicked - File:', file.name);
+
     let mediaType = 'video';
     let mediaPreview = null;
 
@@ -111,60 +111,56 @@ function HeroSection() {
       mediaPreview = null;
     }
 
-    formData.append("media_type", mediaType);
-    
     try {
-      const response = await fetch(
-        "https://brashiest-florinda-pseudodemocratically.ngrok-free.dev/scan-video",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Server error");
-      }
-
-      const data = await response.json();
+      console.log('📤 Sending file to backend...');
+      const data = await submitAnalysisFile(file, mediaType);
+      console.log('✅ Backend response received:', data);
+      console.log('🆔 Request ID from backend:', data.request_id);
       
-      // Start analysis with request ID, filename, file type, and media preview
-      startAnalysis(data.request_id, file.name, mediaType, mediaPreview);
+      // Store request data WITHOUT loading state (skip LoadingOverlay)
+      analysisState.requestId = data.request_id;
+      analysisState.fileName = file.name;
+      analysisState.fileType = mediaType;
+      analysisState.mediaPreview = mediaPreview;
+      console.log('📝 Analysis context updated with request_id:', data.request_id);
+      
+      // Navigate to results page immediately - no loading overlay
+      console.log('🚀 Navigating to results dashboard...');
+      navigate('/results');
     } catch (err) {
-      console.error(err);
+      console.error('❌ Error submitting analysis:', err);
       setError(err.message);
     }
   };
 
-  // Polling function
-  const pollAnalysisStatus = async () => {
-    if (!analysisState.requestId) return;
+  // Polling function - wrapped in useCallback to prevent recreation on every render
+  const pollAnalysisStatus = useCallback(async () => {
+    if (!analysisState.requestId) {
+      console.log('⏳ Waiting for request ID...');
+      return;
+    }
 
     try {
-      const response = await fetch(
-        `https://brashiest-florinda-pseudodemocratically.ngrok-free.dev/analysis-status/${analysisState.requestId}`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to check status");
-      }
-
-      const data = await response.json();
+      console.log('🔄 Polling status for request_id:', analysisState.requestId);
+      const data = await getAnalysisStatus(analysisState.requestId);
+      console.log('📊 Status check result:', data);
 
       if (data.status === 'completed') {
+        console.log('✅ Analysis completed! Result:', data.result);
         completeAnalysis(data.result);
-        // Navigate to results page after a short delay
-        setTimeout(() => {
-          navigate('/results');
-        }, 500);
+        console.log('📝 Context updated with result');
+        // Don't navigate here - results page is already open
       } else if (data.status === 'failed') {
+        console.log('❌ Analysis failed:', data.error);
         setError(data.error || 'Analysis failed');
+      } else {
+        console.log('⏱️ Still processing... Progress:', data.progress + '%');
       }
     } catch (err) {
-      console.error('Polling error:', err);
-      setError(err.message);
+      console.error('❌ Polling error:', err);
+      // Don't set error on network issues - keep polling
     }
-  };
+  }, [analysisState.requestId, completeAnalysis, setError]);
 
   // Start polling when analysis is loading
   usePolling(

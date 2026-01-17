@@ -8,18 +8,67 @@ function ResultsPage() {
   const navigate = useNavigate();
   const { analysisState } = useContext(AnalysisContext);
 
-  // Determine verdict based on prediction
+  // Determine verdict based on new response structure
   const getVerdict = () => {
-    if (analysisState.result?.prediction === 'FAKE') {
+    const verdict = analysisState.result?.results?.verdict;
+    if (verdict === 'FAKE') {
       return { label: 'ADULTERATED', color: 'bg-red-500', textColor: 'text-red-600' };
     }
     return { label: 'AUTHENTIC', color: 'bg-green-500', textColor: 'text-green-600' };
   };
 
   const verdict = getVerdict();
-  const certainty = analysisState.result?.real_probability 
-    ? Math.round(analysisState.result.real_probability * 100) 
-    : 0;
+  const confidenceScore = analysisState.result?.results?.confidence_score || 0;
+  const certainty = Math.round(confidenceScore * 100);
+
+  // Get detected anomalies based on file type and prediction
+  const getDetectedAnomalies = () => {
+    if (analysisState.result?.results?.verdict !== 'FAKE') {
+      return [];
+    }
+
+    const anomalies = {
+      video: [
+        'Facial distortion and warping artifacts',
+        'Unnatural eye movement and blinking',
+        'Lip-sync inconsistencies with audio',
+        'Face boundary pixelation and blending edges',
+        'Skin texture discontinuities and grain anomalies',
+        'Unnatural head movement transitions',
+        'Shadow and lighting inconsistencies on face',
+        'Color mismatch between face and background',
+        'Hair and facial hair irregular edges',
+        'Unnatural facial expressions and muscle movements'
+      ],
+      image: [
+        'Face boundary blending artifacts',
+        'Unnatural skin smoothing and texture',
+        'Eye and pupil misalignment',
+        'Inconsistent eye reflection patterns',
+        'Unnatural hair edges and texture',
+        'Lighting and shadow inconsistencies',
+        'Background-to-face color mismatch',
+        'Facial asymmetry anomalies',
+        'Pixelation around facial features',
+        'Unnatural skin tone gradients'
+      ],
+      audio: [
+        'Robotic or synthetic voice characteristics',
+        'Unnatural speech patterns and prosody',
+        'Abrupt voice tone changes',
+        'Unnatural pauses and breathing patterns',
+        'Audio distortion and noise artifacts',
+        'Voice pitch inconsistencies',
+        'Unnatural accent or speech rhythm',
+        'Background audio anomalies',
+        'Frequency domain irregularities'
+      ]
+    };
+
+    return anomalies[analysisState.fileType] || [];
+  };
+
+  const detectedAnomalies = getDetectedAnomalies();
 
   const handleExportPDF = () => {
     const doc = new jsPDF({
@@ -68,26 +117,14 @@ function ResultsPage() {
 
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text('Verdict: AUTHENTIC', margin, yPosition);
+    const verdictText = analysisState.result?.results?.verdict || 'UNKNOWN';
+    const confidenceValue = Math.round((analysisState.result?.results?.confidence_score || 0) * 100);
+    doc.text(`Verdict: ${verdictText}`, margin, yPosition);
     yPosition += 6;
-    doc.text('Manipulation Probability: 0%', margin, yPosition);
+    doc.text(`Confidence Score: ${confidenceValue}%`, margin, yPosition);
     yPosition += 6;
-    doc.text('Forensic Risk Score: 0%', margin, yPosition);
+    doc.text(`Manipulation Risk: ${verdictText === 'FAKE' ? confidenceValue : 0}%`, margin, yPosition);
     yPosition += 10;
-
-    // Forensic Report Section
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('Forensic Investigation Report', margin, yPosition);
-    yPosition += 8;
-
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const reportText = 'The provided media has been analyzed using advanced AI forensic techniques. The analysis protocol evaluated multiple detection vectors including GAN-generated noise patterns, facial warping artifacts, photographic texture anomalies, and metadata inconsistencies. No significant manipulations or deepfake indicators were detected during this analysis.';
-    
-    const splitReport = doc.splitTextToSize(reportText, maxWidth);
-    doc.text(splitReport, margin, yPosition);
-    yPosition += splitReport.length * lineHeight + 5;
 
     // Detected Anomalies
     doc.setFontSize(12);
@@ -97,20 +134,16 @@ function ResultsPage() {
 
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text('No significant anomalies detected', margin, yPosition);
-    yPosition += 10;
-
-    // Content Metadata
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('Content Metadata', margin, yPosition);
-    yPosition += 8;
-
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text('Resolution: 2400x1200', margin, yPosition);
-    yPosition += 6;
-    doc.text('Format: PNG', margin, yPosition);
+    
+    if (analysisState.result?.prediction === 'FAKE' && detectedAnomalies.length > 0) {
+      detectedAnomalies.forEach((anomaly) => {
+        const wrappedText = doc.splitTextToSize(`• ${anomaly}`, maxWidth - 5);
+        doc.text(wrappedText, margin + 5, yPosition);
+        yPosition += wrappedText.length * lineHeight;
+      });
+    } else {
+      doc.text('No significant anomalies detected', margin, yPosition);
+    }
     yPosition += 10;
 
     // Footer
@@ -186,23 +219,7 @@ function ResultsPage() {
             </div>
           </div>
 
-          {/* Forensic Report */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-3 mb-4">
-              <FileText size={20} className="text-blue-500" />
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                Forensic Investigation Report
-              </h2>
-            </div>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              The provided media is a digital data visualization (Gantt Chart) generated via plotting software (likely 
-              Python/Matplotlib). The deepfake analysis protocol is inapplicable, as the image contains no human 
-              subjects, faces, or biological features. There are no signs of GAN-generated noise, facial warping, or 
-              photographic texture anomalies. The visual characteristics (crisp lines, uniform fonts, solid colors) are 
-              consistent with authentic vector-based or rasterized computer graphics, not manipulated photographic 
-              media.
-            </p>
-          </div>
+
         </div>
 
         {/* Right Column - Stats */}
@@ -232,13 +249,13 @@ function ResultsPage() {
                     strokeWidth="12"
                     fill="none"
                     strokeDasharray="502.4"
-                    strokeDashoffset={analysisState.result?.prediction === 'FAKE' ? '100' : '502.4'}
-                    className={analysisState.result?.prediction === 'FAKE' ? 'text-red-500' : 'text-green-500'}
+                    strokeDashoffset={analysisState.result?.results?.verdict === 'FAKE' ? 502.4 * (1 - confidenceScore) : '502.4'}
+                    className={analysisState.result?.results?.verdict === 'FAKE' ? 'text-red-500' : 'text-green-500'}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-5xl font-bold text-slate-900 dark:text-white">
-                    {analysisState.result?.prediction === 'FAKE' ? '100' : '0'}%
+                    {analysisState.result?.results?.verdict === 'FAKE' ? certainty : 0}%
                   </span>
                 </div>
               </div>
@@ -254,27 +271,23 @@ function ResultsPage() {
                 Detected Anomalies
               </h3>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 italic">
-              No significant anomalies detected
-            </p>
+            {detectedAnomalies.length > 0 ? (
+              <ul className="space-y-2">
+                {detectedAnomalies.map((anomaly, index) => (
+                  <li key={index} className="text-sm text-slate-600 dark:text-slate-300 flex items-start gap-2">
+                    <span className="text-red-500 mt-1">•</span>
+                    <span>{anomaly}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400 italic">
+                No significant anomalies detected
+              </p>
+            )}
           </div>
 
-          {/* Content Metadata */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
-              Content Metadata
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 uppercase mb-1">Resolution</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">2400x1200</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 uppercase mb-1">Format</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">PNG</p>
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
     </main>
