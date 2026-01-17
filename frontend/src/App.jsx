@@ -1,9 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { AnalysisProvider } from './context/AnalysisContext';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ResultsPage from './pages/ResultsPage';
+import LoadingOverlay from './components/LoadingOverlay';
 import { Features } from './components/Features';
 import { ArrowRight, Zap } from 'lucide-react';
 import './App.css';
@@ -93,16 +95,19 @@ function LandingPageContent() {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <div className="min-h-screen transition-colors bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-[#0a1628] dark:via-[#152238] dark:to-[#1a2a42] text-slate-900 dark:text-slate-100">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<LandingPageContent />} />
-            <Route path="/home" element={<HomePage />} />
-            <Route path="/results" element={<ResultsPage />} />
-          </Routes>
-        </div>
-      </Router>
+      <AnalysisProvider>
+        <Router>
+          <div className="min-h-screen transition-colors bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-[#0a1628] dark:via-[#152238] dark:to-[#1a2a42] text-slate-900 dark:text-slate-100">
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<LandingPageContent />} />
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/results" element={<ResultsPage />} />
+            </Routes>
+            <LoadingOverlay />
+          </div>
+        </Router>
+      </AnalysisProvider>
     </ThemeProvider>
   );
 }

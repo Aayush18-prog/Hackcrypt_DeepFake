@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCloudArrowUp, FaX } from 'react-icons/fa6';
+import { AnalysisContext } from '../context/AnalysisContext';
+import { usePolling } from '../hooks/usePolling';
 
 function HeroSection() {
   const navigate = useNavigate();
+  const { analysisState, startAnalysis, completeAnalysis, setError } = useContext(AnalysisContext);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [thumbnails, setThumbnails] = useState({});
-  const [fileName, setFileName] = useState('');
-  const [status, setStatus] = useState('idle'); // 'idle' | 'loading' | 'done' | 'error'
-  const [result, setResult] = useState(null);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -94,18 +94,23 @@ function HeroSection() {
     const file = selectedFiles[0];
     if (!file) return;
 
-    setFileName(file.name);
-    setStatus("loading");
-    setResult(null);
-
     const formData = new FormData();
     formData.append("file", file);
+    
     let mediaType = 'video';
+    let mediaPreview = null;
+
     if (file.type.startsWith('image/')) {
-        mediaType = 'image';
+      mediaType = 'image';
+      mediaPreview = getFilePreview(file, 0);
+    } else if (file.type.startsWith('video/')) {
+      mediaType = 'video';
+      mediaPreview = thumbnails[0] || null;
     } else if (file.type.startsWith('audio/')) {
-        mediaType = 'audio';
+      mediaType = 'audio';
+      mediaPreview = null;
     }
+
     formData.append("media_type", mediaType);
     
     try {
@@ -122,13 +127,51 @@ function HeroSection() {
       }
 
       const data = await response.json();
-      setResult(data);
-      setStatus("done");
+      
+      // Start analysis with request ID, filename, file type, and media preview
+      startAnalysis(data.request_id, file.name, mediaType, mediaPreview);
     } catch (err) {
       console.error(err);
-      setStatus("error");
+      setError(err.message);
     }
   };
+
+  // Polling function
+  const pollAnalysisStatus = async () => {
+    if (!analysisState.requestId) return;
+
+    try {
+      const response = await fetch(
+        `https://brashiest-florinda-pseudodemocratically.ngrok-free.dev/analysis-status/${analysisState.requestId}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to check status");
+      }
+
+      const data = await response.json();
+
+      if (data.status === 'completed') {
+        completeAnalysis(data.result);
+        // Navigate to results page after a short delay
+        setTimeout(() => {
+          navigate('/results');
+        }, 500);
+      } else if (data.status === 'failed') {
+        setError(data.error || 'Analysis failed');
+      }
+    } catch (err) {
+      console.error('Polling error:', err);
+      setError(err.message);
+    }
+  };
+
+  // Start polling when analysis is loading
+  usePolling(
+    pollAnalysisStatus,
+    analysisState.status === 'loading',
+    2000 // Poll every 2 seconds
+  );
 
   return (
     <div className="text-center flex flex-col items-center">
@@ -214,17 +257,17 @@ function HeroSection() {
         />
       </div>
 
-      {/* Send for Analysis Button */}
+      {/* Submit Button */}
       <button
-        disabled={selectedFiles.length === 0 || status === 'loading'}
+        disabled={selectedFiles.length === 0 || analysisState.status === 'loading'}
         onClick={handleSubmitAnalysis}
         className={`w-96 px-8 py-3 rounded-2xl font-semibold text-lg tracking-wide transition-all -mt-8 relative z-10 ${
-          selectedFiles.length === 0 || status === 'loading'
+          selectedFiles.length === 0 || analysisState.status === 'loading'
             ? 'bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-50'
             : 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-600/50 dark:hover:shadow-blue-500/50'
         }`}
       >
-        {status === 'loading' ? 'Analyzing...' : 'Submit for Analysis'}
+        {analysisState.status === 'loading' ? 'Analyzing...' : 'Submit for Analysis'}
       </button>
     </div>
   );
