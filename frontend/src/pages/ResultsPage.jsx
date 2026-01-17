@@ -1,6 +1,6 @@
 import React, { useContext, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Download, Share2 } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { AnalysisContext } from '../context/AnalysisContext';
 import { jsPDF } from 'jspdf';
 
