@@ -93,21 +93,19 @@ function LandingPageContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AnalysisProvider>
-        <Router>
-          <div className="min-h-screen transition-colors bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-[#0a1628] dark:via-[#152238] dark:to-[#1a2a42] text-slate-900 dark:text-slate-100">
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<LandingPageContent />} />
-              <Route path="/home" element={<HomePage />} />
-              <Route path="/results" element={<ResultsPage />} />
-            </Routes>
-            <LoadingOverlay />
-          </div>
-        </Router>
-      </AnalysisProvider>
-    </ThemeProvider>
+    <AnalysisProvider>
+      <Router>
+        <div className="min-h-screen transition-colors bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-[#0a1628] dark:via-[#152238] dark:to-[#1a2a42] text-slate-900 dark:text-slate-100">
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<LandingPageContent />} />
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/results" element={<ResultsPage />} />
+          </Routes>
+          <LoadingOverlay />
+        </div>
+      </Router>
+    </AnalysisProvider>
   );
 }
 

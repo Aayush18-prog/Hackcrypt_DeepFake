@@ -1,11 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sun, Moon } from 'lucide-react';
 import LogoSvg from '../assests/Deepfake logo.svg';
 
 function Navbar() {
   const [theme, setTheme] = useState('dark');
-  const { toggleTheme } = useContext(ThemeContext);
 
   return (
     <header
