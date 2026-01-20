@@ -6,6 +6,60 @@ A comprehensive deepfake detection and analysis platform that combines machine l
 
 Hackcrypt DeepFake is a full-stack application designed to detect and analyze deepfake videos and images. The platform provides users with a simple interface to upload media files and receive detailed analysis reports identifying potential manipulations or synthetic content.
 
+## Status
+
+🔨 **Under Active Development** - Version 0.1.0
+
+This project is currently in **early development** phase. The foundation and architecture are in place, but several components are still being worked on.
+
+### Development Progress
+
+| Component                | Status             | Details                                                |
+| ------------------------ | ------------------ | ------------------------------------------------------ |
+| **Backend API**          | 🟡 In Progress     | Core API structure set up, model integration pending   |
+| **Frontend UI**          | 🟢 Mostly Complete | Analysis workflow UI implemented, polish phase ongoing |
+| **ML Model Integration** | 🟡 In Progress     | Model selection and optimization in progress           |
+| **Media Processing**     | 🟡 In Progress     | Video/image preprocessing pipeline being developed     |
+| **Result Analysis**      | 🟡 In Progress     | Report generation and visualization in development     |
+| **Authentication**       | ⚪ Not Started     | User authentication system planned for v0.2            |
+| **Database**             | ⚪ Not Started     | Persistent storage solution pending                    |
+| **Deployment**           | ⚪ Not Started     | Docker & deployment docs planned for v0.2              |
+| **Testing Suite**        | ⚪ Not Started     | Unit & integration tests to be added                   |
+| **Documentation**        | 🟡 In Progress     | README and API docs being finalized                    |
+
+### Known Limitations
+
+- ⚠️ No persistent data storage (results are session-based)
+- ⚠️ ML model accuracy is still being optimized
+- ⚠️ Limited media format support (expansion planned)
+- ⚠️ No user authentication system yet
+- ⚠️ Performance optimization still pending
+
+### Roadmap
+
+**v0.2.0 (Next Release)**
+
+- [ ] User authentication system
+- [ ] Database integration for result history
+- [ ] Enhanced ML model with better accuracy
+- [ ] Docker containerization
+- [ ] API documentation (Swagger/OpenAPI)
+
+**v0.3.0 (Future)**
+
+- [ ] Batch processing capability
+- [ ] Advanced analytics dashboard
+- [ ] Export results functionality
+- [ ] Performance optimizations
+
+### Contributing
+
+We welcome contributions! Please note that the project is actively evolving. If you'd like to contribute:
+
+1. Check the roadmap above
+2. Open an issue before starting on new features
+3. Follow the development guidelines in each module
+
 ## Features
 
 - 🎬 **Media Analysis**: Upload and analyze videos and images for deepfake detection
