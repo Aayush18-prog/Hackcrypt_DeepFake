@@ -7,7 +7,7 @@ load_dotenv()
 
 class Config:
     PORT = os.getenv("PORT", "8000")
-    BACKEND = os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
+    BACKEND = os.getenv("BACKEND_BASE_URL", "https://verifake-ai.onrender.com")
     DEEPFAKE_MODEL = os.getenv(
         "DEEPFAKE_MODEL",
         "dima806/deepfake_vs_real_image_detection",
