@@ -116,15 +116,10 @@ function HeroSection() {
       const data = await submitAnalysisFile(file, mediaType);
       console.log('✅ Backend response received:', data);
       console.log('🆔 Request ID from backend:', data.request_id);
-      
-      // Store request data WITHOUT loading state (skip LoadingOverlay)
-      analysisState.requestId = data.request_id;
-      analysisState.fileName = file.name;
-      analysisState.fileType = mediaType;
-      analysisState.mediaPreview = mediaPreview;
+
+      startAnalysis(data.request_id, file.name, mediaType, mediaPreview);
       console.log('📝 Analysis context updated with request_id:', data.request_id);
-      
-      // Navigate to results page immediately - no loading overlay
+
       console.log('🚀 Navigating to results dashboard...');
       navigate('/results');
     } catch (err) {

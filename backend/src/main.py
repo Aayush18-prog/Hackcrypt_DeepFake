@@ -1,14 +1,16 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from src.config import Config
+from src.model_service import DeepfakeModelService
 import shutil
 import os
 import uuid
 import uvicorn
-import json
+import threading
 
 
 app = FastAPI()
+model_service = DeepfakeModelService()
 
 # --- 1. CONFIGURATION ---
 # Create the temp folder if it doesn't exist
@@ -20,10 +22,26 @@ analysis_request = {}
 # Enable CORS (So your Frontend/Mobile can talk to this)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def run_model_inference(request_id: str, file_path: str, media_type: str):
+    try:
+        analysis_request[request_id]["progress"] = 25
+        result_payload = model_service.predict_media_file(file_path, media_type)
+        analysis_request[request_id]["progress"] = 100
+        analysis_request[request_id]["status"] = result_payload["status"]
+        analysis_request[request_id]["result"] = result_payload["result"]
+        analysis_request[request_id]["model_name"] = result_payload.get("model_name")
+        analysis_request[request_id]["details"] = result_payload.get("details")
+    except Exception as exc:
+        analysis_request[request_id]["status"] = "failed"
+        analysis_request[request_id]["error"] = str(exc)
+        analysis_request[request_id]["progress"] = 100
+
 
 # --- 2. ROUTES ---
 
@@ -31,70 +49,78 @@ app.add_middleware(
 def home():
     return {"status": "online", "message": "Simple Backend is Ready"}
 
+
 @app.post("/scan-video")
-async def scan_video(file: UploadFile = File(...)):
+async def scan_video(file: UploadFile = File(...), media_type: str = "video"):
     print(f"📥 Receiving file: {file.filename}")
-    
 
-    # unique request id
     request_id = str(uuid.uuid4())
-
-    # Generate a unique name (to prevent overwriting)
-    file_ext = file.filename.split(".")[-1]
+    file_ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
     new_filename = f"{uuid.uuid4()}.{file_ext}"
     save_path = f"public/temp/{new_filename}"
-    
-    # Save the file to disk
+
     with open(save_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-        
-    print(f"✅ Video saved successfully at: {save_path}")
+
+    print(f"✅ File saved successfully at: {save_path}")
 
     analysis_request[request_id] = {
-        "status":"processing",
+        "status": "processing",
         "filename": file.filename,
         "saved_path": save_path,
         "progress": 0,
-        "result": None
+        "result": None,
+        "error": None,
+        "media_type": media_type,
     }
-    
-    # Return success message
+
+    inference_thread = threading.Thread(
+        target=run_model_inference,
+        args=(request_id, save_path, media_type),
+        daemon=True,
+    )
+    inference_thread.start()
+
     return {
         "status": "success",
-        "request_id":request_id,
+        "request_id": request_id,
         "message": "Analysis started. Check status with request",
         "original_name": file.filename,
-        "saved_path": save_path
+        "saved_path": save_path,
     }
+
+
 @app.get("/analysis-status/{request_id}")
 async def check_analysis_status(request_id: str):
     """
     Poll this endpoint to check if analysis is complete
     """
     if request_id not in analysis_request:
-        raise HTTPException(status_code=404,detail="Request not found")
+        raise HTTPException(status_code=404, detail="Request not found")
 
     request_data = analysis_request[request_id]
-
-    return{
-        "request_id":request_id,
+    response = {
+        "request_id": request_id,
         "status": request_data["status"],
         "progress": request_data["progress"],
-        "result": request_data["result"]
+        "result": request_data["result"],
     }
+
+    if request_data.get("error") is not None:
+        response["error"] = request_data["error"]
+
+    return response
+
 
 @app.delete("/analysis/{request_id}")
 async def clear_analysis(request_id: str):
-    """ Clear analysis data """
+    """Clear analysis data."""
     if request_id in analysis_request:
         del analysis_request[request_id]
 
-    return {
-        "status": "cleared"
-    }
+    return {"status": "cleared"}
+
 
 # --- 3. RUNNER ---
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-# https://brashiest-florinda-pseudodemocratically.ngrok-free.dev
+    uvicorn.run(app, host="0.0.0.0", port=int(Config.PORT or 8000))

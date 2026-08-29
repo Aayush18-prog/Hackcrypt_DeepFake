@@ -1,5 +1,5 @@
 // Simple API client for backend endpoints
-const API_BASE = "https://brashiest-florinda-pseudodemocratically.ngrok-free.dev";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export async function startAnalysis(file, mediaType) {
   const formData = new FormData();
