@@ -45,17 +45,30 @@ class DeepfakeModelService:
         self.model_name = os.getenv("DEEPFAKE_MODEL", DEFAULT_MODEL)
         self.pipeline_instance = None
         self.pipeline_error = None
+        self._loading = False
 
-        if pipeline is not None:
-            try:
-                self.pipeline_instance = pipeline(
-                    "image-classification",
-                    model=self.model_name,
-                    device=-1,
-                )
-            except Exception as exc:  # pragma: no cover - model may not exist yet
-                self.pipeline_error = str(exc)
-                self.pipeline_instance = None
+    def ensure_pipeline(self):
+        if self.pipeline_instance is not None:
+            return self.pipeline_instance
+
+        if self._loading or pipeline is None:
+            return None
+
+        self._loading = True
+        try:
+            self.pipeline_instance = pipeline(
+                "image-classification",
+                model=self.model_name,
+                device=-1,
+            )
+            self.pipeline_error = None
+        except Exception as exc:  # pragma: no cover - model may not exist yet
+            self.pipeline_error = str(exc)
+            self.pipeline_instance = None
+        finally:
+            self._loading = False
+
+        return self.pipeline_instance
 
     @staticmethod
     def _prediction_to_fake_score(prediction: Dict[str, Any]) -> float:
@@ -86,7 +99,7 @@ class DeepfakeModelService:
         return build_model_result(0.52, True, self.model_name, f"Model inference unavailable for {file_path}.")
 
     def _predict_with_pipeline(self, file_path: str) -> Dict[str, Any]:
-        if self.pipeline_instance is None:
+        if self.ensure_pipeline() is None:
             return self._fallback_prediction(file_path, "image")
 
         if Image is None:

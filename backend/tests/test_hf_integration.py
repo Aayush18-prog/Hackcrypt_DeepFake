@@ -32,3 +32,21 @@ def test_prediction_maps_real_and_fake_labels_to_fake_probability():
 
     assert service._prediction_to_fake_score({"label": "Fake", "score": 0.81}) == 0.81
     assert service._prediction_to_fake_score({"label": "Real", "score": 0.89}) == 0.11
+
+
+def test_service_does_not_load_model_during_initialization(monkeypatch):
+    import src.model_service as model_service_module
+
+    original_pipeline = model_service_module.pipeline
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("model should not load during initialization")
+
+    monkeypatch.setattr(model_service_module, "pipeline", fail_if_called)
+
+    service = model_service_module.DeepfakeModelService()
+
+    assert service.pipeline_instance is None
+    assert service.pipeline_error is None
+
+    monkeypatch.setattr(model_service_module, "pipeline", original_pipeline)
