@@ -50,6 +50,16 @@ def home():
     return {"status": "online", "message": "Simple Backend is Ready"}
 
 
+@app.get("/health")
+@app.get("/healthz")
+def health_check():
+    return {
+        "status": "ok",
+        "service": "hackcrypt-backend",
+        "message": "Backend is healthy"
+    }
+
+
 @app.post("/scan-video")
 async def scan_video(file: UploadFile = File(...), media_type: str = "video"):
     print(f"📥 Receiving file: {file.filename}")
