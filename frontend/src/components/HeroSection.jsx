@@ -1,13 +1,12 @@
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCloudArrowUp, FaX } from 'react-icons/fa6';
 import { AnalysisContext } from '../context/AnalysisContext';
-import { usePolling } from '../hooks/usePolling';
-import { startAnalysis as submitAnalysisFile, getAnalysisStatus } from '../api/client';
+import { startAnalysis as submitAnalysisFile } from '../api/client';
 
 function HeroSection() {
   const navigate = useNavigate();
-  const { analysisState, startAnalysis, completeAnalysis, setError } = useContext(AnalysisContext);
+  const { analysisState, startAnalysis, setError } = useContext(AnalysisContext);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [thumbnails, setThumbnails] = useState({});
@@ -127,42 +126,6 @@ function HeroSection() {
       setError(err.message);
     }
   };
-
-  // Polling function - wrapped in useCallback to prevent recreation on every render
-  const pollAnalysisStatus = useCallback(async () => {
-    if (!analysisState.requestId) {
-      console.log('⏳ Waiting for request ID...');
-      return;
-    }
-
-    try {
-      console.log('🔄 Polling status for request_id:', analysisState.requestId);
-      const data = await getAnalysisStatus(analysisState.requestId);
-      console.log('📊 Status check result:', data);
-
-      if (data.status === 'completed') {
-        console.log('✅ Analysis completed! Result:', data.result);
-        completeAnalysis(data.result);
-        console.log('📝 Context updated with result');
-        // Don't navigate here - results page is already open
-      } else if (data.status === 'failed') {
-        console.log('❌ Analysis failed:', data.error);
-        setError(data.error || 'Analysis failed');
-      } else {
-        console.log('⏱️ Still processing... Progress:', data.progress + '%');
-      }
-    } catch (err) {
-      console.error('❌ Polling error:', err);
-      // Don't set error on network issues - keep polling
-    }
-  }, [analysisState.requestId, completeAnalysis, setError]);
-
-  // Start polling when analysis is loading
-  usePolling(
-    pollAnalysisStatus,
-    analysisState.status === 'loading',
-    2000 // Poll every 2 seconds
-  );
 
   return (
     <div className="text-center flex flex-col items-center">

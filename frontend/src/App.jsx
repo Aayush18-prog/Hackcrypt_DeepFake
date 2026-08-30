@@ -1,13 +1,40 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useCallback, useContext } from 'react';
+import { HashRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { AnalysisProvider } from './context/AnalysisContext';
+import { AnalysisContext } from './context/AnalysisContext';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ResultsPage from './pages/ResultsPage';
 import LoadingOverlay from './components/LoadingOverlay';
 import { Features } from './components/Features';
 import { ArrowRight, Zap } from 'lucide-react';
+import { usePolling } from './hooks/usePolling';
+import { getAnalysisStatus } from './api/client';
 import './App.css';
+
+function AnalysisStatusWatcher() {
+  const { analysisState, completeAnalysis, setError } = useContext(AnalysisContext);
+
+  const pollAnalysisStatus = useCallback(async () => {
+    if (!analysisState.requestId) return;
+
+    const data = await getAnalysisStatus(analysisState.requestId);
+
+    if (data.status === 'completed') {
+      completeAnalysis(data.result);
+    } else if (data.status === 'failed') {
+      setError(data.error || 'Analysis failed');
+    }
+  }, [analysisState.requestId, completeAnalysis, setError]);
+
+  usePolling(
+    pollAnalysisStatus,
+    analysisState.status === 'loading',
+    2000
+  );
+
+  return null;
+}
 
 function LandingPageContent() {
   const navigate = useNavigate();
@@ -96,6 +123,7 @@ function App() {
     <AnalysisProvider>
       <Router>
         <div className="min-h-screen transition-colors bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-[#0a1628] dark:via-[#152238] dark:to-[#1a2a42] text-slate-900 dark:text-slate-100">
+          <AnalysisStatusWatcher />
           <Navbar />
           <Routes>
             <Route path="/" element={<LandingPageContent />} />
